@@ -76,10 +76,11 @@ async def stream_handler(reader, writer, unix, lbind, protos, rserver, cipher, s
             asyncio.ensure_future(lproto.channel(reader, writer, DUMMY, DUMMY))
         elif host_name == 'empty':
             asyncio.ensure_future(lproto.channel(reader, writer, None, DUMMY))
-        elif block and block(host_name):
-            raise Exception('BLOCK ' + host_name)
         else:
-            roption = schedule(rserver, salgorithm, host_name, port) or DIRECT
+            if block and not block(host_name):
+                roption = DIRECT
+            else:                
+                roption = schedule(rserver, salgorithm, host_name, port) or DIRECT
             verbose(f'{lproto.name} {remote_text}{roption.logtext(host_name, port)}')
             try:
                 reader_remote, writer_remote = await roption.open_connection(host_name, port, local_addr, lbind)
@@ -113,10 +114,11 @@ async def datagram_handler(writer, data, addr, protos, urserver, block, cipher, 
             writer.sendto(data, addr)
         elif host_name == 'empty':
             pass
-        elif block and block(host_name):
-            raise Exception('BLOCK ' + host_name)
         else:
-            roption = schedule(urserver, salgorithm, host_name, port) or DIRECT
+            if block and not block(host_name):
+                roption = DIRECT
+            else:
+                roption = schedule(urserver, salgorithm, host_name, port) or DIRECT
             verbose(f'UDP {lproto.name} {remote_text}{roption.logtext(host_name, port)}')
             data = roption.udp_prepare_connection(host_name, port, data)
             def reply(rdata):
